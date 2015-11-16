@@ -657,7 +657,7 @@ class BNO055(object):
         X, Y, Z values in degrees per second.
         """
         x, y, z = self._read_vector(BNO055_GYRO_DATA_X_LSB_ADDR)
-        return (x/900.0, y/900.0, z/900.0)
+        return (x/16.0, y/16.0, z/16.0)
 
     def read_accelerometer(self):
         """Return the current accelerometer reading as a tuple of X, Y, Z values
