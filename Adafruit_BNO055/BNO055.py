@@ -328,7 +328,7 @@ class BNO055(object):
             resp = self._serial_send(command)
             # Verify register read succeeded.
             if resp[0] != 0xBB:
-                 raise RuntimeError('Register read error: 0x{0}'.format(binascii.hexlify(resp)))
+                raise RuntimeError('Register read error: 0x{0}'.format(binascii.hexlify(resp)))
             # Read the returned bytes.
             length = resp[1]
             resp = bytearray(self._serial.read(length))
@@ -554,6 +554,50 @@ class BNO055(object):
         self._write_bytes(ACCEL_OFFSET_X_LSB_ADDR, data)
         # Go back to normal operation mode.
         self._operation_mode()
+
+    def load_calibration(self, filename):
+        """Read the internal calibration paramters from a json file.
+
+        :param filename: path to the calibration file
+        """
+        import json
+        with open(filename) as f:
+            json_data = json.load(f)
+
+        data = []
+        data_fields = ['acc_offset', 'mag_offset', 'gyro_offset', 'acc_radius',
+                       'mag_radius']
+        for f in data_fields:
+            if isinstance(json_data[f], list):
+                for v in json_data[f]:
+                    data.append(v & 0xFF)
+                    data.append(v >> 8 & 0xFF)
+            else:
+                data.append(json_data[f] & 0xFF)
+                data.append(json_data[f] >> 8 & 0xFF)
+
+        self.set_calibration(data)
+
+    def write_calibration(self, filename):
+        """Write the internal calibration parameters to a json file.
+
+        :param filename: where to save the calibration file
+        """
+        import json
+        from datetime import datetime
+        data = self.get_calibration()
+        data = [((data[i * 2 + 1] << 8) | data[i * 2]) & 0xFFFF for i in range(11)]
+        json_data = {
+            'name': 'Bosch IMU BNO055',
+            'date': datetime.now().isoformat(),
+            'acc_offset': data[0:3],
+            'mag_offset': data[3:6],
+            'gyro_offset': data[6:9],
+            'acc_radius': data[9],
+            'mag_radius': data[10]
+        }
+        with open(filename, 'w') as f:
+            json.dump(json_data, f, indent=4, sort_keys=True)
 
     def get_axis_remap(self):
         """Return a tuple with the axis remap register values.  This will return
