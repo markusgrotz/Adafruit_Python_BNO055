@@ -271,8 +271,11 @@ class BNO055(object):
             # Else there was a bus error so resend, as recommended in UART app
             # note at:
             #   http://ae-bst.resource.bosch.com/media/products/dokumente/bno055/BST-BNO055-AN012-00.pdf
+            wait_time = min(1.0, (2.0 ** attempts) / 1000.0)
+            time.sleep(wait_time)
             attempts += 1
-            if attempts >=  max_attempts:
+            logger.error('unable to send data attempt {}/{}'.format(attempts, max_attempts))
+            if attempts >= max_attempts:
                 raise RuntimeError('Exceeded maximum attempts to acknowledge serial command without bus error!')
 
     def _write_bytes(self, address, data, ack=True):
@@ -575,7 +578,6 @@ class BNO055(object):
             else:
                 data.append(json_data[f] & 0xFF)
                 data.append(json_data[f] >> 8 & 0xFF)
-
         self.set_calibration(data)
 
     def write_calibration(self, filename):
